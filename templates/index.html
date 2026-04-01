@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AI Agri Quality Inspection System</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<!-- Cropper.js Library -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+</head>
+
+<body>
+
+<!-- NAVIGATION MENU -->
+<div class="navbar">
+<div class="navbar-container">
+<div class="navbar-brand">🍏 Agri-Grade</div>
+<div class="navbar-links">
+<a href="/">Dashboard</a>
+<a href="/history">History</a>
+<a href="/analytics">Analytics</a>
+<a href="/about">About</a>
+</div>
+</div>
+</div>
+
+<!-- HERO SECTION -->
+<div class="hero-section">
+    <video class="hero-video" autoplay muted loop playsinline>
+        <!-- cinematic fruits video stored under static/videos/fruits.mp4 -->
+        <source src="{{ url_for('static', filename='videos/fruits.mp4') }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1>AI Agri Quality Inspection System</h1>
+        <p>Advanced AI-powered fruit quality inspection and grading system</p>
+    </div>
+</div>
+
+<!-- STATISTICS SECTION -->
+<div class="container">
+<div class="stats-section">
+<div class="stat-card">
+<div class="stat-icon">📦</div>
+<div class="stat-content">
+<div class="stat-label">Total Inspections</div>
+<div class="stat-value">{{ total }}</div>
+</div>
+</div>
+
+<div class="stat-card">
+<div class="stat-icon">💰</div>
+<div class="stat-content">
+<div class="stat-label">Total Revenue</div>
+<div class="stat-value">₹{{ total_value }}</div>
+</div>
+</div>
+</div>
+
+<!-- CHART SECTION -->
+<div class="chart-card">
+<h2>📊 Daily Revenue Trend</h2>
+<div class="chart-wrapper">
+<img src="/daily_revenue_chart?ts={{ cache_buster }}" alt="Daily Revenue Chart">
+</div>
+</div>
+
+<!-- INSPECTION PANELS -->
+<h2 class="section-title">Start Inspection</h2>
+<div class="dashboard">
+
+<!-- CAMERA SCAN PANEL -->
+<div class="panel">
+<div class="panel-header">
+<h3>🎥 Live Camera Scan</h3>
+<p class="panel-subtitle">Capture fruit image directly from camera</p>
+</div>
+
+<div class="panel-body">
+<div class="camera-container">
+<video id="video" autoplay playsinline class="video-preview"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<div class="button-group" id="cameraControls">
+<button onclick="startCamera()" class="btn btn-primary">Open Camera</button>
+<button onclick="stopCamera()" class="btn btn-danger">Stop Camera</button>
+<button onclick="captureImage()" class="btn btn-success">Capture Image</button>
+</div>
+
+<!-- CAPTURED IMAGE PREVIEW GALLERY -->
+<div id="previewSection" class="preview-section hidden">
+    <div class="preview-header">
+        <h4>✓ Image Captured</h4>
+        <p>Review and crop if needed</p>
+    </div>
+    <div class="preview-gallery">
+        <img id="previewImage" src="" alt="Captured preview">
+        
+        <!-- CROPPING INTERFACE (Overlay on preview image) -->
+        <div id="cropperModal" class="cropper-modal hidden">
+            <div class="cropper-container">
+                <div class="cropper-canvas">
+                    <img id="cropperImage" src="" alt="Crop image">
+                </div>
+                <div class="cropper-controls">
+                    <button type="button" onclick="cancelCrop()" class="btn btn-danger">Cancel</button>
+                    <button type="button" onclick="cropAndSubmit()" class="btn btn-success">Confirm Crop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="preview-actions">
+        <button onclick="cancelCapture()" class="btn btn-danger">Retake</button>
+        <button onclick="openCropper()" class="btn btn-primary">Crop Image</button>
+        <button onclick="skipCropAndAnalyze()" class="btn btn-success">Analyze Image</button>
+    </div>
+</div>
+
+<!-- CROPPED RESULT PREVIEW -->
+<div id="croppedResultSection" class="cropped-result-section hidden">
+    <div class="result-header">
+        <h4>✓ Image Cropped</h4>
+        <p>Review the cropped result</p>
+    </div>
+    <div class="cropped-preview-container">
+        <div class="original-vs-cropped">
+            <div class="crop-comparison">
+                <div class="comparison-item">
+                    <p class="comparison-label">Original</p>
+                    <img id="originalComparisonImage" src="" alt="Original" class="comparison-image">
+                </div>
+                <div class="comparison-arrow">→</div>
+                <div class="comparison-item">
+                    <p class="comparison-label">Cropped</p>
+                    <img id="croppedComparisonImage" src="" alt="Cropped" class="comparison-image">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="cropped-actions">
+        <button onclick="reCropImage()" class="btn btn-primary">← Re-crop</button>
+        <button onclick="acceptCroppedImage()" class="btn btn-success">Analyze Cropped →</button>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<form method="POST" action="/" id="captureForm">
+<input type="hidden" name="action" value="capture_browser">
+<input type="hidden" name="image_data" id="image_data">
+</form>
+
+{% if live_image_path %}
+<div class="result-box">
+<h4>Inspection Result</h4>
+
+<div class="result-image">
+<img src="{{ live_image_path }}" class="preview" alt="Captured image">
+</div>
+
+<div class="result-details">
+<div class="result-row">
+<span class="result-label">AI Grade:</span>
+<span class="result-value">{{ live_ai_grade }}</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Confidence:</span>
+<span class="result-value">{{ live_confidence }}%</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Defect Level:</span>
+<span class="result-value">{{ live_defect }}%</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Status:</span>
+{% if "Export" in live_final_grade %}
+<span class="badge grade-a">{{ live_final_grade }}</span>
+{% elif "Local" in live_final_grade %}
+<span class="badge grade-b">{{ live_final_grade }}</span>
+{% else %}
+<span class="badge rejected">{{ live_final_grade }}</span>
+{% endif %}
+</div>
+
+<div class="result-row">
+<span class="result-label">Price/KG:</span>
+<span class="result-value">₹{{ live_price_per_kg }}</span>
+</div>
+
+{% if blur_warning %}
+<div class="warning-box">⚠ Image is blurry. Please capture again.</div>
+{% endif %}
+</div>
+
+<form method="POST" action="/" class="batch-form">
+<input type="hidden" name="action" value="calculate_live">
+<input type="hidden" name="live_price_per_kg" value="{{ live_price_per_kg }}">
+<input type="hidden" name="live_image_path" value="{{ live_image_path }}">
+<input type="hidden" name="live_ai_grade" value="{{ live_ai_grade }}">
+<input type="hidden" name="live_confidence" value="{{ live_confidence }}">
+<input type="hidden" name="live_defect" value="{{ live_defect }}">
+<input type="hidden" name="live_final_grade" value="{{ live_final_grade }}">
+
+<input type="number" name="live_weight" placeholder="Enter Batch Weight (kg)" min="1" required class="form-input">
+<button type="submit" class="btn btn-primary btn-block">Calculate Batch Value</button>
+</form>
+
+{% if live_profit is defined %}
+<div class="batch-result">
+<div class="batch-row">
+<span>Batch Weight:</span>
+<span class="batch-value">{{ live_weight }} kg</span>
+</div>
+<div class="batch-row highlight">
+<span>Batch Value:</span>
+<span class="batch-value">₹{{ live_profit }}</span>
+</div>
+</div>
+{% endif %}
+
+</div>
+{% endif %}
+</div>
+</div>
+
+<!-- UPLOAD PANEL -->
+<div class="panel">
+<div class="panel-header">
+<h3>📤 Upload Image</h3>
+<p class="panel-subtitle">Upload fruit image from your device</p>
+</div>
+
+<div class="panel-body">
+<form method="POST" action="/" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+<input type="hidden" name="action" value="upload">
+<div class="file-input-wrapper">
+<input type="file" name="file" id="fileInput" required class="file-input">
+<label for="fileInput" class="file-label">📁 Choose Image</label>
+</div>
+<div id="selectedFileName" class="selected-file-display"></div>
+<button type="submit" class="btn btn-primary btn-block">Analyze Upload</button>
+<div id="uploadLoading" class="upload-loading hidden">
+<div class="spinner"></div>
+<span>Analyzing image with AI...</span>
+</div>
+</form>
+
+{% if image_path %}
+<div class="result-box">
+<h4>Inspection Result</h4>
+
+<div class="result-image">
+<img src="{{ image_path }}" class="preview" alt="Uploaded image">
+</div>
+
+<div class="result-details">
+<div class="result-row">
+<span class="result-label">AI Grade:</span>
+<span class="result-value">{{ ai_grade }}</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Confidence:</span>
+<span class="result-value">{{ confidence }}%</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Defect Level:</span>
+<span class="result-value">{{ defect }}%</span>
+</div>
+
+<div class="result-row">
+<span class="result-label">Status:</span>
+{% if "Export" in final_grade %}
+<span class="badge grade-a">{{ final_grade }}</span>
+{% elif "Local" in final_grade %}
+<span class="badge grade-b">{{ final_grade }}</span>
+{% else %}
+<span class="badge rejected">{{ final_grade }}</span>
+{% endif %}
+</div>
+
+<div class="result-row">
+<span class="result-label">Price/KG:</span>
+<span class="result-value">₹{{ price_per_kg }}</span>
+</div>
+
+{% if blur_warning %}
+<div class="warning-box">⚠ Image is blurry. Please upload clearer image.</div>
+{% endif %}
+</div>
+
+<form method="POST" action="/" class="batch-form">
+<input type="hidden" name="action" value="calculate_upload">
+<input type="hidden" name="price_per_kg" value="{{ price_per_kg }}">
+<input type="hidden" name="image_path" value="{{ image_path }}">
+<input type="hidden" name="ai_grade" value="{{ ai_grade }}">
+<input type="hidden" name="confidence" value="{{ confidence }}">
+<input type="hidden" name="defect" value="{{ defect }}">
+<input type="hidden" name="final_grade" value="{{ final_grade }}">
+
+<input type="number" name="weight" placeholder="Enter Batch Weight (kg)" min="1" required class="form-input">
+<button type="submit" class="btn btn-primary btn-block">Calculate Batch Value</button>
+</form>
+
+{% if profit is defined %}
+<div class="batch-result">
+<div class="batch-row">
+<span>Batch Weight:</span>
+<span class="batch-value">{{ weight }} kg</span>
+</div>
+<div class="batch-row highlight">
+<span>Batch Value:</span>
+<span class="batch-value">₹{{ profit }}</span>
+</div>
+</div>
+{% endif %}
+
+</div>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+
+</body>
+</html>

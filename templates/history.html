@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Inspection History</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .history-container {
+        max-width: 1100px;
+        margin: 60px auto;
+        padding: 0 20px;
+    }
+
+    .history-card {
+        background: rgba(255,255,255,0.98);
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.15);
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .history-card h2 {
+        margin-top: 0;
+        color: #1f2937;
+        font-size: 28px;
+        margin-bottom: 30px;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .history-table thead {
+        background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+        color: white;
+    }
+
+    .history-table th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .history-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .history-table tbody tr:nth-child(odd) {
+        background: #f9fafb;
+    }
+
+    .history-table tbody tr:nth-child(even) {
+        background: rgba(255, 152, 0, 0.05);
+    }
+
+    .history-table tbody tr:hover {
+        background: rgba(255, 152, 0, 0.12);
+        transition: background 0.3s ease;
+    }
+
+    .history-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7280;
+        font-size: 16px;
+    }
+
+    .batch-value {
+        color: #059669;
+        font-weight: 600;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .history-card {
+            padding: 20px;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 10px 8px;
+            font-size: 12px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="history-container">
+    <div class="history-card">
+        <h2>📋 Inspection History</h2>
+
+        {% if data %}
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Grade</th>
+                        <th>Defect %</th>
+                        <th>Final Grade</th>
+                        <th>Batch Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                        <tr>
+                            <td>{{ row[0] }}</td>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}%</td>
+                            <td><strong>{{ row[3] }}</strong></td>
+                            <td class="batch-value">₹{{ row[4] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-data">📭 No inspection history available yet. Start by scanning produce to build history.</p>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

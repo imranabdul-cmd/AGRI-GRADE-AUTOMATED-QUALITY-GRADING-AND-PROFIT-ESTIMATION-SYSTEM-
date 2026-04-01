@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Analytics</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .analytics-container {
+        max-width: 900px;
+        margin: 60px auto;
+        padding: 0 20px;
+    }
+
+    .analytics-card {
+        background: rgba(255,255,255,0.98);
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.15);
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .analytics-card h2 {
+        margin-top: 0;
+        color: #1f2937;
+        font-size: 28px;
+        margin-bottom: 30px;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .analytics-table thead {
+        background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+        color: white;
+    }
+
+    .analytics-table th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .analytics-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
+        color: #374151;
+    }
+
+    .analytics-table tbody tr:nth-child(even) {
+        background: rgba(255, 152, 0, 0.05);
+    }
+
+    .analytics-table tbody tr:hover {
+        background: rgba(255, 152, 0, 0.1);
+        transition: background 0.3s ease;
+    }
+
+    .analytics-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7280;
+        font-size: 16px;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .chart-section {
+        margin-top: 30px;
+        padding: 30px;
+        background: linear-gradient(135deg, #fffaf0, #fff3e0);
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+
+    .chart-section h3 {
+        text-align: center;
+        color: #1f2937;
+        font-size: 22px;
+        margin: 0 0 25px 0;
+        font-weight: 700;
+    }
+
+    .chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        height: 350px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-container {
+            max-width: 300px;
+            height: 300px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="analytics-container">
+    <div class="analytics-card">
+        <h2>📊 Inspection Analytics</h2>
+
+        {% if grade_data %}
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Final Grade</th>
+                        <th>Total Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in grade_data %}
+                        <tr>
+                            <td><strong>{{ row[0] }}</strong></td>
+                            <td>{{ row[1] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Grade Distribution Pie Chart -->
+            <div class="chart-section">
+                <h3>📈 Grade Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="gradeChart"></canvas>
+                </div>
+            </div>
+        {% else %}
+            <p class="no-data">📭 No inspection data available yet. Perform some inspections to see analytics.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Initialize Grade Distribution Donut Chart
+    document.addEventListener('DOMContentLoaded', function() {
+        const gradeChartCanvas = document.getElementById('gradeChart');
+        
+        if (gradeChartCanvas) {
+            // Extract data from the table
+            const rows = document.querySelectorAll('.analytics-table tbody tr');
+            const gradeMap = {
+                'Grade A': 0,
+                'Grade B': 0,
+                'Rejected': 0
+            };
+            
+            // Aggregate data by grade category
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 2) {
+                    const gradeText = cells[0].textContent.trim().toUpperCase();
+                    const count = parseInt(cells[1].textContent.trim()) || 0;
+                    
+                    // Normalize grade names
+                    if (gradeText.includes('GRADE A') || gradeText.includes('EXPORT')) {
+                        gradeMap['Grade A'] += count;
+                    } else if (gradeText.includes('GRADE B') || gradeText.includes('LOCAL')) {
+                        gradeMap['Grade B'] += count;
+                    } else if (gradeText.includes('REJECT')) {
+                        gradeMap['Rejected'] += count;
+                    }
+                }
+            });
+            
+            // Extract normalized data
+            const labels = ['Grade A (Export Quality)', 'Grade B (Local Market)', 'Rejected (Not for Sale)'];
+            const data = [gradeMap['Grade A'], gradeMap['Grade B'], gradeMap['Rejected']];
+            
+            // Only create chart if there's data
+            if (data.some(val => val > 0)) {
+                const ctx = gradeChartCanvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [
+                                '#4CAF50',  // Grade A - Green
+                                '#FF9800',  // Grade B - Orange
+                                '#F44336'   // Rejected - Red
+                            ],
+                            borderColor: 'white',
+                            borderWidth: 3,
+                            borderRadius: 6,
+                            hoverBorderColor: '#fff',
+                            hoverBorderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        cutout: '65%',  // Donut hole size (65%)
+                        animation: {
+                            animateRotate: true,
+                            animateScale: false,
+                            duration: 800
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14,
+                                        weight: '600',
+                                        family: "'Segoe UI', sans-serif"
+                                    },
+                                    color: '#1f2937',
+                                    padding: 18,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxHeight: 8
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 14,
+                                    weight: '700',
+                                    family: "'Segoe UI', sans-serif"
+                                },
+                                bodyFont: {
+                                    size: 13,
+                                    family: "'Segoe UI', sans-serif"
+                                },
+                                borderColor: '#ff8c42',
+                                borderWidth: 2,
+                                borderRadius: 8,
+                                caretPadding: 10,
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        onHover: function(event, activeElements) {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
